@@ -22,6 +22,7 @@ ReactIntlAggregatePlugin.prototype.apply = function (compiler) {
   var messagesPattern = this.plugin_options.messagesPattern || '../../i18n/messages/**/*.json';
   var aggregateOutputDir = this.plugin_options.aggregateOutputDir || '../../i18n/aggregate/';
   var aggregateFilename = this.plugin_options.aggregateFilename || 'en-US';
+  var compress = this.plugin_options.compress || true;
 
   compiler.plugin('emit', function (compilation, callback) {
     var MESSAGES_PATTERN = path.resolve(__dirname, messagesPattern);
@@ -40,13 +41,18 @@ ReactIntlAggregatePlugin.prototype.apply = function (compiler) {
             defaultMessage = _ref.defaultMessage,
             description = _ref.description;
 
-        if (collection.hasOwnProperty(id) && collection[id].defaultMessage) {
-          throw new Error('Duplicate message id: ' + id);
-        }
-        collection[id] = {};
-        collection[id]["defaultMessage"] = defaultMessage;
-        if (description) {
-          collection[id].description = description;
+        if (!compress) {
+          if (collection.hasOwnProperty(id) && collection[id].defaultMessage) {
+            throw new Error('Duplicate message id: ' + id);
+          }
+
+          collection[id] = {};
+          collection[id]["message"] = defaultMessage;
+          if (description) {
+            collection[id].description = description;
+          }
+        } else if (defaultMessage) {
+          collection[id] = defaultMessage;
         }
       });
       return collection;

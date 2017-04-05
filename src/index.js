@@ -8,12 +8,13 @@ function ReactIntlAggregatePlugin(plugin_options) {
 }
 
 ReactIntlAggregatePlugin.prototype.apply = function (compiler) {
-  let messagesPattern    = this.plugin_options.messagesPattern ||
+  const messagesPattern    = this.plugin_options.messagesPattern ||
                             '../../i18n/messages/**/*.json';
-  let aggregateOutputDir = this.plugin_options.aggregateOutputDir ||
+  const aggregateOutputDir = this.plugin_options.aggregateOutputDir ||
                             '../../i18n/aggregate/';
-  let aggregateFilename  = this.plugin_options.aggregateFilename ||
+  const aggregateFilename  = this.plugin_options.aggregateFilename ||
                             'en-US';
+  const compress = this.plugin_options.compress || true;
 
   compiler.plugin('emit', function (compilation, callback) {
     const MESSAGES_PATTERN = path.resolve(__dirname, messagesPattern);
@@ -28,13 +29,18 @@ ReactIntlAggregatePlugin.prototype.apply = function (compiler) {
       .map((file) => JSON.parse(file))
       .reduce((collection, descriptors) => {
         descriptors.forEach(({id, defaultMessage, description}) => {
-          if (collection.hasOwnProperty(id) && collection[id].defaultMessage) {
-            throw new Error(`Duplicate message id: ${id}`);
-          }
-          collection[id] = {};
-          collection[id]["defaultMessage"] = defaultMessage;
-          if (description) {
-            collection[id].description = description;
+          if (!compress)  {
+            if (collection.hasOwnProperty(id) && collection[id].defaultMessage) {
+              throw new Error(`Duplicate message id: ${id}`);
+            }
+
+            collection[id] = {};
+            collection[id]["message"] = defaultMessage;
+            if (description) {
+              collection[id].description = description;
+            }
+          } else if (defaultMessage) {
+            collection[id] = defaultMessage;
           }
         });
         return collection;
@@ -43,7 +49,7 @@ ReactIntlAggregatePlugin.prototype.apply = function (compiler) {
     console.log('Creating directory: ' + AGGREGATE_DIR);
     mkdirpSync(AGGREGATE_DIR);
     console.log('Writing file: ' + AGGREGATE_FILE + ' with ' +
-      Object.keys(defaultMessages).length + ' keys');
+    Object.keys(defaultMessages).length + ' keys');
     let aggregateTranslations = JSON.stringify(defaultMessages, null, 2);
     fs.writeFileSync(AGGREGATE_FILE, aggregateTranslations);
     console.log('Aggregating translations JSON complete!');
